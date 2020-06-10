@@ -1,52 +1,38 @@
 package SAML;
 
 import java.io.IOException;
-
-import org.apache.log4j.Logger;
-import org.testng.annotations.BeforeMethod;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.util.EntityUtils;
+import org.testng.Assert;
 import org.testng.annotations.Test;
-
+import com.adweb.qa.base.Login;
 import com.adweb.qa.base.TestBase;
+import com.adweb.qa.client.RestClient;
+import com.adweb.qa.resources.Constant;
 
-import io.restassured.response.Response;
-import static io.restassured.RestAssured.given;
-
-public class GetServerInfoAPITest extends TestBase {
-
-	Logger log = Logger.getLogger(GetServerInfoAPITest.class);
-
-	String baseUrl;
-	String apiUrl;
-	String url;
-
-	public GetServerInfoAPITest() throws IOException {
-		super();
-	}
-
-	@BeforeMethod
-	public void setUp() throws IOException {
-
-		baseUrl = prop.getProperty("URL");
-		apiUrl = prop.getProperty("ServerInfoURL");
-		url = baseUrl + apiUrl;
-
-	}
-
+public class GetServerInfoAPITest {
+	
+	
 	// Test Case1: Verify that API returns basic information about GO instance.
-	@Test
-	public void getServerInfoAPITest() {
-
+	@Test(priority=1)
+	public void getServerInfoAPITest() throws ClientProtocolException, IOException {
+		
+		TestBase.getInstance().generateURL("ServerInfoAPI");
 		System.out.println("Test Case1: Verify that API returns basic information about GO instance.");
-		log.info("Get Server info request execution started");
-		Response response = given().
-				header("Content-Type", "application/json").
-				header("User-Agent", "Greenorbit").
-				when().
-				get(url).
-				then().extract().response();
+		TestBase.getInstance().logger.info("Get Server info request execution started");
+				
+		TestBase.getInstance().closebaleHttpResponse = RestClient.get(TestBase.getInstance().finalUrl, Login.getInstance().headerMap);
+		final String responseString = EntityUtils.toString(TestBase.getInstance().closebaleHttpResponse.getEntity(), "UTF-8");
+		TestBase.getInstance().logger.info("Get Server Info API Response===>" + responseString);
 
-		System.out.println(response.asString());
-		log.info("Get Server info request execution ended");
+		TestBase.getInstance().logger.info("Get Server info request execution ended");
+	}
+	
+	@Test(priority=2)
+	public void verifyStatusCodeForGetServerInfoAPI() {
+		TestBase.getInstance().logger.info("Test Case2: Verify that API returns the correct status code for 'Login/OAuth' request");
+		TestBase.getInstance().logger.info("Status Code is===>" + TestBase.getInstance().closebaleHttpResponse.getStatusLine().getStatusCode());
+		Assert.assertEquals(TestBase.getInstance().closebaleHttpResponse.getStatusLine().getStatusCode(), Constant.RESPONSE_STATUS_CODE_200);
 	}
 
 }

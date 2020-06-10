@@ -1,84 +1,75 @@
 package Profiles;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
-import org.apache.log4j.Logger;
-import org.testng.annotations.BeforeMethod;
+import org.apache.http.ParseException;
+import org.apache.http.util.EntityUtils;
+import org.testng.Assert;
 import org.testng.annotations.Test;
-
+import com.adweb.qa.base.Login;
 import com.adweb.qa.base.TestBase;
-import com.adweb.qa.data.Payload;
-import com.adweb.qa.data.ReuseableMethods;
+import com.adweb.qa.client.RestClient;
+import com.adweb.qa.resources.Constant;
+import com.adweb.qa.resources.RequestPayload;
+import com.adweb.qa.resources.loadprofiles.LoadProfilesResponse;
+import com.adweb.qa.resources.loadprofiles.Profile;
+import com.google.gson.Gson;
 
 import OAuth.LoginAPITest;
-import io.restassured.path.json.JsonPath;
-import io.restassured.response.Response;
-import static io.restassured.RestAssured.given;
 
-public class LoadProfileAPITest extends TestBase {
+public class LoadProfileAPITest {
 
-	Logger log = Logger.getLogger(LoadProfileAPITest.class);
+	private String responseString;
+	private LoginAPITest loginAPITest = new LoginAPITest();
 
-	TestBase testBase;
-	String baseUrl;
-	String apiUrl;
-	String url;
-	Response response;
-	JsonPath m_js;
-
-	public LoadProfileAPITest() throws IOException {
-		super();
-
-	}
-
-	@BeforeMethod
-	public void setUp() throws IOException {
-		testBase = new TestBase();
-		baseUrl = prop.getProperty("URL");
-		apiUrl = prop.getProperty("ApiURL");
-		url = baseUrl + apiUrl;
-
-	}
-
-	// Test Case1: Verify that API returns all the information about the User.
-	@Test
+	@Test(priority = 1)
 	public void loadProfileTest() throws IOException {
-	//	LoginAPITest login = new LoginAPITest();
-	//	login.loginTest("iphone", "iphone@123");
-		Login.getLoginResponse();
-		System.out.println();
-		System.out.println("Test Case1: Verify that API returns all the information about the User.");
-		log.info("Load Profile request execution started");
+		// Use below uncommented code only for single test case execution
+		//loginAPITest.loginTest("guest1", "guest1");
+		//Login.getInstance().getLogin();
+		TestBase.getInstance().generateURL("DataloaderUrl");
+		TestBase.getInstance().logger.info("Test Case1: Verify that API returns all the information about the User.");
+		TestBase.getInstance().closebaleHttpResponse = RestClient.post(TestBase.getInstance().finalUrl,RequestPayload.loadProfilePayload(Login.getInstance().actorid),Login.getInstance().headerMapWithToken);
+		responseString = EntityUtils.toString(TestBase.getInstance().closebaleHttpResponse.getEntity(), "UTF-8");
+		TestBase.getInstance().logger.info("Load Profile Response===>" + responseString);
 
-		response = given().
-				header("Content-Type", "application/json").
-				header("User-Agent", "Greenorbit").
-				header("Authorization", Login.accessToken).
-				body(Payload.loadProfilerequest()).
-				when().
-				post(url).
-				then().extract().response();
-		System.out.println(response.asString());
-		log.info("Load Profile request execution ended");
-		System.out.println();
 	}
 
 	// Test Case2: Verify that API returns the correct status code.
-	@Test
+	@Test(priority = 2)
+
 	public void verifyStatusCodeForLoadProfile() {
 
-		log.info("Test Case2: Verify that API returns the correct status code for 'Profile Details' request");
-		int statusCode = response.getStatusCode();
-		ReuseableMethods.assertEquals(statusCode, RESPONSE_STATUS_CODE_200);
+		TestBase.getInstance().logger
+				.info("Test Case2: Verify that API returns the correct status code for 'Profile Details' request");
+		TestBase.getInstance().logger.info(
+				"Status Code is===> " + TestBase.getInstance().closebaleHttpResponse.getStatusLine().getStatusCode());
+		Assert.assertEquals(TestBase.getInstance().closebaleHttpResponse.getStatusLine().getStatusCode(),
+				Constant.RESPONSE_STATUS_CODE_200);
+
 	}
 
-	// Test Case3: Verify that API returns the correct GO Version
-	@Test
-	public void verifyFrontEndActorIDForLoadProfile() {
-		log.info("Test Case3: Verify that API returns the correct GO Version");
-		m_js = ReuseableMethods.rawToJSON(response);
-		String ActorID = m_js.get("profiles.\"" + Login.actorID + "\".id");
-		ReuseableMethods.assertEquals(ActorID, Login.actorID);
-	}
+	// Test Case3: Verify that API returns the correct Correct Actor ID Version
+	@Test(priority = 3)
+	public void verifyFrontEndActorIDForLoadProfile() throws ParseException, IOException {
 
+		TestBase.getInstance().logger.info("Test Case3: Verify that API returns the correct Actor ID");
+		final Gson gson = new Gson();
+		LoadProfilesResponse loadProfilesResponse = gson.fromJson(responseString, LoadProfilesResponse.class);
+		HashMap<String, Profile> profiles = loadProfilesResponse.getProfiles();
+		for(Map.Entry<String,Profile> m: profiles.entrySet()) {
+			//String key = m.getKey();
+			Profile profile = m.getValue();
+			TestBase.getInstance().logger.info("Actor ID is===>" +profile.getId());
+			Assert.assertEquals(profile.getId(), Login.getInstance().actorid);
+			}
+		
+	}
+	
 }
+
+
